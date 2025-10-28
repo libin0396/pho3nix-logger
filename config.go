@@ -1,6 +1,10 @@
 package pho3nix_logger
 
-import "github.com/spf13/viper"
+import (
+	"github.com/libin0396/quant-platform-sdk/config"
+	"log/slog"
+	"os"
+)
 
 // RotationConfig 定义了文件轮转的参数
 type RotationConfig struct {
@@ -37,19 +41,17 @@ type Config struct {
 	} `mapstructure:"file"`
 }
 
-// LoadConfigFromViper 从一个 viper 实例中加载日志配置
-// v: 任何一个配置了日志参数的 viper 实例
-// configKey: 日志配置在 viper 中的顶层键 (e.g., "logger")
-func LoadConfigFromViper(v *viper.Viper, configKey string) (*Config, error) {
-	var cfg Config
-	// 设置一些合理的默认值
-	cfg.Level = "info"
-	cfg.Console.Enabled = true
-	cfg.Console.Level = "debug"
-	cfg.File.DefaultRotation = RotationConfig{MaxSizeMB: 50, MaxBackups: 3, MaxAgeDays: 7}
+func InitializeFromConfig(configKey string) {
+	// 1. 直接从 config-sdk 获取 viper 实例
+	v := config.GetViper()
 
-	if err := v.UnmarshalKey(configKey, &cfg); err != nil {
-		return nil, err
+	// 2. 从 viper 实例中解析出 logger 的配置节
+	var logCfg Config
+	if err := v.UnmarshalKey(configKey, &logCfg); err != nil {
+		// 如果解析失败，使用最原始的方式打印错误并退出
+		slog.Error("加载日志配置失败，程序退出", "config_key", configKey, "error", err)
+		os.Exit(1)
 	}
-	return &cfg, nil
+
+	Initialize(&logCfg)
 }
